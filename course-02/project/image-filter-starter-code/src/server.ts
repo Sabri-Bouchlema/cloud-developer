@@ -1,6 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import { filterImageFromURL, deleteLocalFiles } from './util/util';
+import Jimp = require('jimp');
 
 (async () => {
 
@@ -20,13 +21,17 @@ import { filterImageFromURL, deleteLocalFiles } from './util/util';
       return res.status(400).send({ message: 'image_url is required' });
     }
 
+    const isImageValid = await Jimp.read(image_url).catch(() => {
+      return null;
+    })
+
+    if (!isImageValid) {
+      return res.sendStatus(422);
+    }
+
     const filteredImage = await filterImageFromURL(image_url);
 
-    res.sendFile(filteredImage);
-    res.on('finish', function () {
-      deleteLocalFiles([filteredImage]);
-    });
-
+    res.sendFile(filteredImage, () => deleteLocalFiles([filteredImage]));
   });
 
   // Root Endpoint
